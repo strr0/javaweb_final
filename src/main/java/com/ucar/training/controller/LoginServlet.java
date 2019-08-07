@@ -15,35 +15,24 @@ import java.util.List;
 
 @WebServlet("/LoginServlet")
 public class LoginServlet extends HttpServlet {
-    private UserDAO userDAO;
 
     @Override
     public void init() throws ServletException {
-        userDAO = new UserDAO();
-        //检测是否有新用户注册
-        List<User> users = (List<User>) this.getServletContext().getAttribute("usersKey");
-        if(users != null){
-            userDAO.setUsers(users);
+        if(UserDAO.getAdmins() == null){
+            UserDAO.initUserDao();
+            this.getServletContext().setAttribute("adminsKey", UserDAO.getAdmins());
+            this.getServletContext().setAttribute("usersKey", UserDAO.getUsers());
         }
-        List<User> admins = (List<User>)this.getServletContext().getAttribute("adminsKey");
-        if(admins != null){
-            userDAO.setAdmins(admins);
-        }
-        //更新
-        this.getServletContext().setAttribute("usersKey", userDAO.getUsers());
-        this.getServletContext().setAttribute("adminsKey", userDAO.getAdmins());
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        request.setCharacterEncoding("UTF-8");
-        response.setContentType("text/html;charset=UTF-8");
+        //PrintWriter out = response.getWriter();
         String name = request.getParameter("name");
         String password = request.getParameter("password");
-        PrintWriter out = response.getWriter();
         //普通用户
-        if(userDAO.getUsers() != null){
-            for(User user : userDAO.getUsers()){
+        if(UserDAO.getUsers() != null){
+            for(User user : UserDAO.getUsers()){
                 if(name.equals(user.getName()) && password.equals(user.getPassword())){
                     request.getSession().setAttribute("adminKey", "no");
                     request.getSession().setAttribute("nameKey", name);
@@ -56,8 +45,8 @@ public class LoginServlet extends HttpServlet {
             }
         }
         //管理员
-        if(userDAO.getAdmins() != null){
-            for(User admin : userDAO.getAdmins()){
+        if(UserDAO.getAdmins() != null){
+            for(User admin : UserDAO.getAdmins()){
                 if(name.equals(admin.getName()) && password.equals(admin.getPassword())){
                     request.getSession().setAttribute("adminKey", "yes");
                     request.getSession().setAttribute("nameKey", name);
@@ -74,17 +63,17 @@ public class LoginServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        request.setCharacterEncoding("UTF-8");
-        response.setContentType("text/html;charset=UTF-8");
+        //判断是否已经登陆
         String name = (String)request.getSession().getAttribute("nameKey");
-        String admin = (String)request.getSession().getAttribute("adminKey");
         if(name != null){
+            //判断是否为管理员
+            String admin = (String)request.getSession().getAttribute("adminKey");
             if(admin.equals("yes")){
                 request.getRequestDispatcher("MessageServlet").forward(request, response);
                 return;
             }
             else{
-                User user = userDAO.getUserByName(name);
+                User user = UserDAO.getUserByName(name);
                 request.setAttribute("userKey", user);
                 request.getRequestDispatcher("pages/user/profile.jsp").forward(request, response);
                 return;
